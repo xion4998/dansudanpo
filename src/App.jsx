@@ -1,5 +1,23 @@
 /* eslint-disable */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, set, onValue } from "firebase/database";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBr-Vq8kDPrxNv8RojdrPa_GUgXth2tHmg",
+  authDomain: "teamnight-d909b.firebaseapp.com",
+  databaseURL: "https://teamnight-d909b-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "teamnight-d909b",
+  storageBucket: "teamnight-d909b.firebasestorage.app",
+  messagingSenderId: "440378727824",
+  appId: "1:440378727824:web:2c4bf51c6c57f8f7d96715"
+};
+
+let fdb = null;
+try { fdb = getDatabase(initializeApp(firebaseConfig)); } catch (e) {}
+const dbSet = (p, val) => { try { if (fdb) set(ref(fdb, p), val); } catch (e) {} };
+
+const EDIT_PASSWORD = "002"; // 수정 비밀번호
 
 const ZONES = ["상부", "하부", "B", "C", "D", "P", "T", "W", "Z"];
 const ZONE_COLORS = {
@@ -53,6 +71,27 @@ export default function App() {
   const [activeType, setActiveType] = useState("단수");
   const [activeDay, setActiveDay] = useState("당일");
   const [copied, setCopied] = useState(false);
+  const [editable, setEditable] = useState(() => {
+    try { return localStorage.getItem("dansu_editable") === "true"; } catch (e) { return false; }
+  });
+  const [showPwInput, setShowPwInput] = useState(false);
+  const [pwValue, setPwValue] = useState("");
+
+  const tryUnlock = () => {
+    if (pwValue === EDIT_PASSWORD) {
+      setEditable(true);
+      try { localStorage.setItem("dansu_editable", "true"); } catch (e) {}
+      setShowPwInput(false); setPwValue("");
+    } else {
+      setPwValue("");
+    }
+  };
+
+  const lockEdit = () => {
+    setEditable(false);
+    try { localStorage.setItem("dansu_editable", "false"); } catch (e) {}
+  };
+
   const [enabledCats, setEnabledCats] = useState(() => {
     try { const s = localStorage.getItem("dansu_enabled_cats"); if (s) return JSON.parse(s); } catch (e) {}
     return { "당일": true, "일반": true, "원박스": true };
@@ -64,9 +103,9 @@ export default function App() {
     try { localStorage.setItem("dansu_enabled_cats", JSON.stringify(next)); } catch (e) {}
   };
 
-  const saveData = (newData) => {
+  const saveData = (newData) => { if (!editable) return;
     setData(newData);
-    try { localStorage.setItem("dansu_v2_data", JSON.stringify(newData)); } catch (e) {}
+    try { localStorage.setItem("dansu_v2_data", JSON.stringify(newData)); } catch (e) {} dbSet("dansu/data", newData);
   };
 
   const toggle = (zone, type, dy) => {
@@ -93,6 +132,21 @@ export default function App() {
     setResetConfirm(false);
   };
 
+
+  // Firebase 실시간 구독
+  useEffect(() => {
+    if (!fdb) return;
+    const subs = [];
+    subs.push(onValue(ref(fdb, "dansu/data"), snap => {
+      const v = snap.val();
+      if (v) {
+        setData(v);
+        try { localStorage.setItem("dansu_v2_data", JSON.stringify(v)); } catch (e) {}
+      }
+    }));
+    return () => subs.forEach(u => u());
+  }, []);
+
   const grandStats = useMemo(() => {
     const out = {};
     TYPES.forEach(t => {
@@ -104,6 +158,14 @@ export default function App() {
     });
     return out;
   }, [data]);
+
+  // 대시보드용 요약 실시간 전송
+  useEffect(() => {
+    let done = 0, total = 0;
+    TYPES.forEach(t => DAYS.forEach(dy => { total += 1; if (grandStats[t][dy].pct === 100) done += 1; }));
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    dbSet("summary/dansu", { pct, ts: Date.now() });
+  }, [grandStats]);
 
   const activeColor = TYPE_COLORS[activeType];
   const activeDayColor = DAY_COLORS[activeDay];
@@ -148,6 +210,28 @@ export default function App() {
       <div style={{ textAlign: "center", marginBottom: 20 }}>
         <h1 style={{ fontSize: 22, fontWeight: 900, margin: 0, background: "linear-gradient(135deg,#7c3aed,#0891b2,#ea580c)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>단수단포</h1>
         <div style={{ fontSize: 11, letterSpacing: "0.3em", color: S.textSub, textTransform: "uppercase", marginTop: 4, fontWeight: 500 }}>피킹 진행 현황</div>
+        {/* 잠금 상태 */}
+        <div style={{ marginTop: 10 }}>
+          {editable ? (
+            <button onClick={lockEdit} style={{ fontSize: 11, fontWeight: 700, padding: "5px 16px", borderRadius: 20, cursor: "pointer", background: "#dcfce7", border: "1px solid #86efac", color: "#15803d", fontFamily: "inherit" }}>
+              🔓 수정 가능 · 탭하여 잠금
+            </button>
+          ) : showPwInput ? (
+            <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center" }}>
+              <input type="password" inputMode="numeric" value={pwValue} autoFocus
+                onChange={e => setPwValue(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && tryUnlock()}
+                placeholder="비밀번호"
+                style={{ width: 100, background: "#fff", border: "1.5px solid #7c3aed", borderRadius: 10, padding: "6px 10px", fontSize: 14, fontWeight: 700, outline: "none", textAlign: "center", fontFamily: "inherit" }} />
+              <button onClick={tryUnlock} style={{ fontSize: 12, fontWeight: 800, padding: "7px 14px", borderRadius: 10, cursor: "pointer", background: "#7c3aed", border: "none", color: "#fff", fontFamily: "inherit" }}>확인</button>
+              <button onClick={() => { setShowPwInput(false); setPwValue(""); }} style={{ fontSize: 12, fontWeight: 700, padding: "7px 10px", borderRadius: 10, cursor: "pointer", background: "#f8fafc", border: "1px solid #e2e8f0", color: "#94a3b8", fontFamily: "inherit" }}>취소</button>
+            </div>
+          ) : (
+            <button onClick={() => setShowPwInput(true)} style={{ fontSize: 11, fontWeight: 700, padding: "5px 16px", borderRadius: 20, cursor: "pointer", background: "#f8fafc", border: "1px solid #e2e8f0", color: "#94a3b8", fontFamily: "inherit" }}>
+              🔒 보기 전용 · 탭하여 잠금해제
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 단수/단포/원박스 탭 */}
