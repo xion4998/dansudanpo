@@ -21,6 +21,7 @@ const EDIT_PASSWORD = "002"; // 수정 비밀번호
 
 const ZONES = ["상부", "하부", "B", "C", "D", "P", "T", "W", "Z"];
 const WONBOX_ZONES = ["상부", "하부", "B2"]; // 원박스 전용 존
+const getZones = (t) => t === "원박스" ? WONBOX_ZONES : ZONES;
 const ZONE_COLORS = {
   "상부": "#7c3aed", "하부": "#2563eb", "B": "#ea580c", "C": "#0891b2",
   "D": "#dc2626", "P": "#059669", "T": "#db2777", "W": "#65a30d", "Z": "#d97706",
