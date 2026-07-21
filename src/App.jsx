@@ -161,9 +161,9 @@ export default function App() {
 
   // 대시보드용 요약 실시간 전송
   useEffect(() => {
-    let done = 0, total = 0;
-    TYPES.forEach(t => DAYS.forEach(dy => { total += 1; if (grandStats[t][dy].pct === 100) done += 1; }));
-    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    let totalPct = 0, count = 0;
+    TYPES.forEach(t => DAYS.forEach(dy => { totalPct += grandStats[t][dy].pct; count += 1; }));
+    const pct = count > 0 ? Math.round(totalPct / count) : 0;
     dbSet("summary/dansu", { pct, ts: Date.now() });
   }, [grandStats]);
 
