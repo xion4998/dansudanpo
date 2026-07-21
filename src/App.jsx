@@ -20,6 +20,7 @@ const dbSet = (p, val) => { try { if (fdb) set(ref(fdb, p), val); } catch (e) {}
 const EDIT_PASSWORD = "002"; // 수정 비밀번호
 
 const ZONES = ["상부", "하부", "B", "C", "D", "P", "T", "W", "Z"];
+const WONBOX_ZONES = ["상부", "하부", "B2"]; // 원박스 전용 존
 const ZONE_COLORS = {
   "상부": "#7c3aed", "하부": "#2563eb", "B": "#ea580c", "C": "#0891b2",
   "D": "#dc2626", "P": "#059669", "T": "#db2777", "W": "#65a30d", "Z": "#d97706",
@@ -42,7 +43,8 @@ const initData = () => {
     if (saved) return JSON.parse(saved);
   } catch (e) {}
   const d = {};
-  ZONES.forEach(z => {
+  const allZones = [...new Set([...ZONES, ...WONBOX_ZONES])];
+  allZones.forEach(z => {
     d[z] = {};
     TYPES.forEach(t => {
       d[z][t] = {};
@@ -181,8 +183,9 @@ export default function App() {
       if (t === "원박스" && !enabledCats["원박스"]) return;
       DAYS.forEach(dy => {
         if (!enabledCats[dy]) return;
-        const done = ZONES.filter(z => data[z][t][dy]);
-        const notDone = ZONES.filter(z => !data[z][t][dy]);
+        const zones = getZones(t);
+        const done = zones.filter(z => (data[z]||{})[t]?.[dy]);
+        const notDone = zones.filter(z => !(data[z]||{})[t]?.[dy]);
         const label = `${t} ${dy}`;
         if (done.length === ZONES.length) {
           lines.push(`${label} : 완료`);
@@ -261,6 +264,37 @@ export default function App() {
         ))}
       </div>
 
+      {/* 토탈 도넛 */}
+      {(() => {
+        let totalPct = 0, count = 0;
+        TYPES.forEach(t => DAYS.forEach(dy => { totalPct += grandStats[t][dy].pct; count += 1; }));
+        const pct = count > 0 ? Math.round(totalPct / count) : 0;
+        return (
+          <div style={{ background: "linear-gradient(135deg,#7c3aed,#ea580c)", borderRadius: 16, padding: "16px 20px", marginBottom: 12, display: "flex", alignItems: "center", gap: 16, boxShadow: "0 4px 20px rgba(124,58,237,0.3)" }}>
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              <CircleProgress percent={pct} color="#ffffff" size={80} />
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>{pct}%</span>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginBottom: 4 }}>전체 토탈 진행률</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: "#fff" }}>{pct}%</div>
+              <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                {TYPES.map(t => DAYS.map(dy => {
+                  const gs = grandStats[t][dy];
+                  return (
+                    <span key={`${t}_${dy}`} style={{ fontSize: 9, padding: "2px 6px", borderRadius: 20, background: "rgba(255,255,255,0.2)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)" }}>
+                      {t} {dy} {gs.pct}%
+                    </span>
+                  );
+                }))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Grand Total */}
       <div style={{ background: `linear-gradient(135deg,${activeColor},${activeDayColor})`, borderRadius: 16, padding: "16px 20px", marginBottom: 16, display: "flex", alignItems: "center", gap: 16, boxShadow: `0 4px 20px ${activeColor}33` }}>
         <div style={{ position: "relative", flexShrink: 0 }}>
@@ -273,7 +307,7 @@ export default function App() {
           <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginBottom: 4 }}>{activeType} {activeDay} 진행률</div>
           <div style={{ fontSize: 22, fontWeight: 900, color: "#fff" }}>{g.done} / {g.total} 존 완료</div>
           <div style={{ display: "flex", gap: 5, marginTop: 6, flexWrap: "wrap" }}>
-            {ZONES.map(z => (
+            {getZones(activeType).map(z => (
               <span key={z} style={{
                 fontSize: 9, padding: "2px 6px", borderRadius: 20,
                 background: data[z][activeType][activeDay] ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)",
