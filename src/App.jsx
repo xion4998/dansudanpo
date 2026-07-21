@@ -153,10 +153,11 @@ export default function App() {
   const grandStats = useMemo(() => {
     const out = {};
     TYPES.forEach(t => {
+      const zones = getZones(t);
       out[t] = {};
       DAYS.forEach(dy => {
-        const done = ZONES.filter(z => data[z][t][dy]).length;
-        out[t][dy] = { done, total: ZONES.length, pct: Math.round((done / ZONES.length) * 100) };
+        const done = zones.filter(z => (data[z]||{})[t]?.[dy]).length;
+        out[t][dy] = { done, total: zones.length, pct: Math.round((done / zones.length) * 100) };
       });
     });
     return out;
@@ -311,10 +312,10 @@ export default function App() {
             {getZones(activeType).map(z => (
               <span key={z} style={{
                 fontSize: 9, padding: "2px 6px", borderRadius: 20,
-                background: data[z][activeType][activeDay] ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)",
+                background: (data[z]||{})[activeType]?.[activeDay] ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)",
                 color: "#fff", border: "1px solid rgba(255,255,255,0.3)"
               }}>
-                {data[z][activeType][activeDay] ? "✓" : "·"} {z}
+                {(data[z]||{})[activeType]?.[activeDay] ? "✓" : "·"} {z}
               </span>
             ))}
           </div>
@@ -331,7 +332,7 @@ export default function App() {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
           {ZONES.map(z => {
-            const done = data[z][activeType][activeDay];
+            const done = (data[z]||{})[activeType]?.[activeDay];
             const color = ZONE_COLORS[z];
             return (
               <button key={z} onClick={() => toggle(z, activeType, activeDay)} style={{
