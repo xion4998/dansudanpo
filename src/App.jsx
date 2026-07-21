@@ -20,7 +20,7 @@ const dbSet = (p, val) => { try { if (fdb) set(ref(fdb, p), val); } catch (e) {}
 const EDIT_PASSWORD = "002"; // 수정 비밀번호
 
 const ZONES = ["상부", "하부", "B", "C", "D", "P", "T", "W", "Z"];
-const WONBOX_ZONES = ["상부", "하부", "B2"]; // 원박스 전용 존
+const WONBOX_ZONES = ["상부", "하부", "P", "Z"]; // 원박스 전용 존
 const getZones = (t) => t === "원박스" ? WONBOX_ZONES : ZONES;
 const ZONE_COLORS = {
   "상부": "#7c3aed", "하부": "#2563eb", "B": "#ea580c", "C": "#0891b2",
@@ -41,11 +41,26 @@ try {
 const initData = () => {
   try {
     const saved = localStorage.getItem("dansu_v2_data");
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const d = JSON.parse(saved);
+      // B2 없으면 추가 (마이그레이션)
+      const allZones = [...new Set([...ZONES, ...WONBOX_ZONES])];
+      allZones.forEach(z => {
+        if (!d[z]) {
+          d[z] = {};
+          TYPES.forEach(t => { d[z][t] = {}; DAYS.forEach(dy => { d[z][t][dy] = false; }); });
+        } else {
+          TYPES.forEach(t => {
+            if (!d[z][t]) { d[z][t] = {}; DAYS.forEach(dy => { d[z][t][dy] = false; }); }
+            else { DAYS.forEach(dy => { if (d[z][t][dy] === undefined) d[z][t][dy] = false; }); }
+          });
+        }
+      });
+      return d;
+    }
   } catch (e) {}
   const d = {};
-  const allZones = [...new Set([...ZONES, ...WONBOX_ZONES])];
-  allZones.forEach(z => {
+  ZONES.forEach(z => {
     d[z] = {};
     TYPES.forEach(t => {
       d[z][t] = {};
