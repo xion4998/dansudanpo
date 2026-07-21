@@ -181,10 +181,16 @@ export default function App() {
   // 대시보드용 요약 실시간 전송
   useEffect(() => {
     let totalPct = 0, count = 0;
-    TYPES.forEach(t => DAYS.forEach(dy => { totalPct += grandStats[t][dy].pct; count += 1; }));
+    TYPES.forEach(t => {
+      if (t === "원박스" && !enabledCats["원박스"]) return;
+      DAYS.forEach(dy => {
+        if (!enabledCats[dy]) return;
+        totalPct += grandStats[t][dy].pct; count += 1;
+      });
+    });
     const pct = count > 0 ? Math.round(totalPct / count) : 0;
     dbSet("summary/dansu", { pct, ts: Date.now() });
-  }, [grandStats]);
+  }, [grandStats, enabledCats]);
 
   const activeColor = TYPE_COLORS[activeType];
   const activeDayColor = DAY_COLORS[activeDay];
@@ -284,7 +290,13 @@ export default function App() {
       {/* 토탈 도넛 */}
       {(() => {
         let totalPct = 0, count = 0;
-        TYPES.forEach(t => DAYS.forEach(dy => { totalPct += grandStats[t][dy].pct; count += 1; }));
+        TYPES.forEach(t => {
+          if (t === "원박스" && !enabledCats["원박스"]) return;
+          DAYS.forEach(dy => {
+            if (!enabledCats[dy]) return;
+            totalPct += grandStats[t][dy].pct; count += 1;
+          });
+        });
         const pct = count > 0 ? Math.round(totalPct / count) : 0;
         return (
           <div style={{ background: "linear-gradient(135deg,#7c3aed,#ea580c)", borderRadius: 16, padding: "16px 20px", marginBottom: 12, display: "flex", alignItems: "center", gap: 16, boxShadow: "0 4px 20px rgba(124,58,237,0.3)" }}>
