@@ -346,24 +346,30 @@ export default function App() {
           <span style={{ color: S.textSub, marginLeft: 6, fontWeight: 500 }}>완료 체크</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
-          {ZONES.map(z => {
-            const done = (data[z]||{})[activeType]?.[activeDay];
-            const color = ZONE_COLORS[z];
-            return (
-              <button key={z} onClick={() => toggle(z, activeType, activeDay)} style={{
-                background: done ? color+"15" : S.inputBg,
-                border: `2px solid ${done ? color : S.border}`,
-                borderRadius: 12, padding: "14px 8px", cursor: "pointer",
-                textAlign: "center", transition: "all 0.2s", fontFamily: "inherit",
-              }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color, marginBottom: 6 }}>{z} 존</div>
-                <div style={{ fontSize: 22 }}>{done ? "✅" : "⬜"}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: done ? color : S.textSub, marginTop: 5 }}>
-                  {done ? "완료" : "미완료"}
-                </div>
-              </button>
-            );
-          })}
+          {(() => {
+            const activeZones = getZones(activeType);
+            const lockedZones = activeType === "원박스" ? ZONES.filter(z => !activeZones.includes(z)) : [];
+            return [...activeZones, ...lockedZones].map(z => {
+              const isLocked = lockedZones.includes(z);
+              const done = (data[z]||{})[activeType]?.[activeDay];
+              const color = ZONE_COLORS[z] || "#94a3b8";
+              return (
+                <button key={z} onClick={() => !isLocked && toggle(z, activeType, activeDay)} style={{
+                  background: isLocked ? "#f1f5f9" : done ? color+"15" : S.inputBg,
+                  border: `2px solid ${isLocked ? "#e2e8f0" : done ? color : S.border}`,
+                  borderRadius: 12, padding: "14px 8px", cursor: isLocked ? "default" : "pointer",
+                  textAlign: "center", transition: "all 0.2s", fontFamily: "inherit",
+                  opacity: isLocked ? 0.4 : 1,
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: isLocked ? "#94a3b8" : color, marginBottom: 6 }}>{z} 존</div>
+                  <div style={{ fontSize: 22 }}>{isLocked ? "🔒" : done ? "✅" : "⬜"}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: isLocked ? "#94a3b8" : done ? color : S.textSub, marginTop: 5 }}>
+                    {isLocked ? "미운영" : done ? "완료" : "미완료"}
+                  </div>
+                </button>
+              );
+            });
+          })()}
         </div>
       </div>
 
