@@ -13,22 +13,20 @@ const firebaseConfig = {
   appId: "1:440378727824:web:2c4bf51c6c57f8f7d96715"
 };
 
+const EDIT_PASSWORD = "002";
 let fdb = null;
 try { fdb = getDatabase(initializeApp(firebaseConfig)); } catch (e) {}
 const dbSet = (p, val) => { try { if (fdb) set(ref(fdb, p), val); } catch (e) {} };
 
-const EDIT_PASSWORD = "002"; // 수정 비밀번호
 
 const ZONES = ["상부", "하부", "B", "C", "D", "P", "T", "W", "Z"];
-const WONBOX_ZONES = ["상부", "하부", "P", "Z"]; // 원박스 전용 존
-const getZones = (t) => t === "원박스" ? WONBOX_ZONES : ZONES;
 const ZONE_COLORS = {
   "상부": "#7c3aed", "하부": "#2563eb", "B": "#ea580c", "C": "#0891b2",
   "D": "#dc2626", "P": "#059669", "T": "#db2777", "W": "#65a30d", "Z": "#d97706",
 };
-const TYPES = ["단수", "단포", "원박스"];
+const TYPES = ["단수", "단포"];
 const DAYS = ["당일", "일반"];
-const TYPE_COLORS = { "단수": "#7c3aed", "단포": "#0891b2", "원박스": "#ea580c" };
+const TYPE_COLORS = { "단수": "#7c3aed", "단포": "#0891b2" };
 const DAY_COLORS = { "당일": "#dc2626", "일반": "#059669" };
 
 try {
@@ -43,9 +41,7 @@ const initData = () => {
     const saved = localStorage.getItem("dansu_v2_data");
     if (saved) {
       const d = JSON.parse(saved);
-      // B2 없으면 추가 (마이그레이션)
-      const allZones = [...new Set([...ZONES, ...WONBOX_ZONES])];
-      allZones.forEach(z => {
+      ZONES.forEach(z => {
         if (!d[z]) {
           d[z] = {};
           TYPES.forEach(t => { d[z][t] = {}; DAYS.forEach(dy => { d[z][t][dy] = false; }); });
@@ -112,7 +108,7 @@ export default function App() {
 
   const [enabledCats, setEnabledCats] = useState(() => {
     try { const s = localStorage.getItem("dansu_enabled_cats"); if (s) return JSON.parse(s); } catch (e) {}
-    return { "당일": true, "일반": true, "원박스": true };
+    return { "당일": true, "일반": true };
   });
 
   const toggleCat = (c) => {
@@ -168,10 +164,10 @@ export default function App() {
   const grandStats = useMemo(() => {
     const out = {};
     TYPES.forEach(t => {
-      const zones = getZones(t);
+      const zones = ZONES;
       out[t] = {};
       DAYS.forEach(dy => {
-        const done = zones.filter(z => (data[z]||{})[t]?.[dy]).length;
+        const done = zones.filter(z => ((data[z]||{})[t]||{})[dy]).length;
         out[t][dy] = { done, total: zones.length, pct: Math.round((done / zones.length) * 100) };
       });
     });
@@ -182,7 +178,6 @@ export default function App() {
   useEffect(() => {
     let totalPct = 0, count = 0;
     TYPES.forEach(t => {
-      if (t === "원박스" && !enabledCats["원박스"]) return;
       DAYS.forEach(dy => {
         if (!enabledCats[dy]) return;
         totalPct += grandStats[t][dy].pct; count += 1;
@@ -203,12 +198,11 @@ export default function App() {
     const dateNum = now.getDate();
     const lines = [`단수단포 (${timeStr})`, `${month}월${dateNum}일자`, `──────────────`];
     TYPES.forEach(t => {
-      if (t === "원박스" && !enabledCats["원박스"]) return;
       DAYS.forEach(dy => {
         if (!enabledCats[dy]) return;
-        const zones = getZones(t);
-        const done = zones.filter(z => (data[z]||{})[t]?.[dy]);
-        const notDone = zones.filter(z => !(data[z]||{})[t]?.[dy]);
+        const zones = ZONES;
+        const done = zones.filter(z => ((data[z]||{})[t]||{})[dy]);
+        const notDone = zones.filter(z => !((data[z]||{})[t]||{})[dy]);
         const label = `${t} ${dy}`;
         if (done.length === ZONES.length) {
           lines.push(`${label} : 완료`);
@@ -260,7 +254,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* 단수/단포/원박스 탭 */}
+      {/* 단수/단포 탭 */}
       <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
         {TYPES.map(t => (
           <button key={t} onClick={() => setActiveType(t)} style={{
@@ -291,7 +285,6 @@ export default function App() {
       {(() => {
         let totalPct = 0, count = 0;
         TYPES.forEach(t => {
-          if (t === "원박스" && !enabledCats["원박스"]) return;
           DAYS.forEach(dy => {
             if (!enabledCats[dy]) return;
             totalPct += grandStats[t][dy].pct; count += 1;
@@ -336,13 +329,13 @@ export default function App() {
           <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginBottom: 4 }}>{activeType} {activeDay} 진행률</div>
           <div style={{ fontSize: 22, fontWeight: 900, color: "#fff" }}>{g.done} / {g.total} 존 완료</div>
           <div style={{ display: "flex", gap: 5, marginTop: 6, flexWrap: "wrap" }}>
-            {getZones(activeType).map(z => (
+            {ZONES.map(z => (
               <span key={z} style={{
                 fontSize: 9, padding: "2px 6px", borderRadius: 20,
-                background: (data[z]||{})[activeType]?.[activeDay] ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)",
+                background: ((data[z]||{})[activeType]||{})[activeDay] ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)",
                 color: "#fff", border: "1px solid rgba(255,255,255,0.3)"
               }}>
-                {(data[z]||{})[activeType]?.[activeDay] ? "✓" : "·"} {z}
+                {((data[z]||{})[activeType]||{})[activeDay] ? "✓" : "·"} {z}
               </span>
             ))}
           </div>
@@ -358,30 +351,24 @@ export default function App() {
           <span style={{ color: S.textSub, marginLeft: 6, fontWeight: 500 }}>완료 체크</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
-          {(() => {
-            const activeZones = getZones(activeType);
-            const lockedZones = activeType === "원박스" ? ZONES.filter(z => !activeZones.includes(z)) : [];
-            return [...activeZones, ...lockedZones].map(z => {
-              const isLocked = lockedZones.includes(z);
-              const done = (data[z]||{})[activeType]?.[activeDay];
-              const color = ZONE_COLORS[z] || "#94a3b8";
-              return (
-                <button key={z} onClick={() => !isLocked && toggle(z, activeType, activeDay)} style={{
-                  background: isLocked ? "#f1f5f9" : done ? color+"15" : S.inputBg,
-                  border: `2px solid ${isLocked ? "#e2e8f0" : done ? color : S.border}`,
-                  borderRadius: 12, padding: "14px 8px", cursor: isLocked ? "default" : "pointer",
-                  textAlign: "center", transition: "all 0.2s", fontFamily: "inherit",
-                  opacity: isLocked ? 0.4 : 1,
-                }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: isLocked ? "#94a3b8" : color, marginBottom: 6 }}>{z} 존</div>
-                  <div style={{ fontSize: 22 }}>{isLocked ? "🔒" : done ? "✅" : "⬜"}</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: isLocked ? "#94a3b8" : done ? color : S.textSub, marginTop: 5 }}>
-                    {isLocked ? "미운영" : done ? "완료" : "미완료"}
-                  </div>
-                </button>
-              );
-            });
-          })()}
+          {ZONES.map(z => {
+            const done = ((data[z]||{})[activeType]||{})[activeDay];
+            const color = ZONE_COLORS[z];
+            return (
+              <button key={z} onClick={() => toggle(z, activeType, activeDay)} style={{
+                background: done ? color+"15" : S.inputBg,
+                border: `2px solid ${done ? color : S.border}`,
+                borderRadius: 12, padding: "14px 8px", cursor: "pointer",
+                textAlign: "center", transition: "all 0.2s", fontFamily: "inherit",
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color, marginBottom: 6 }}>{z} 존</div>
+                <div style={{ fontSize: 22 }}>{done ? "✅" : "⬜"}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: done ? color : S.textSub, marginTop: 5 }}>
+                  {done ? "완료" : "미완료"}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -390,7 +377,7 @@ export default function App() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: S.text }}>전체 요약</div>
           <div style={{ display: "flex", gap: 4 }}>
-            {["당일", "일반", "원박스"].map(c => (
+            {["당일", "일반"].map(c => (
               <button key={c} onClick={() => toggleCat(c)} style={{
                 fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 8, cursor: "pointer",
                 background: enabledCats[c] ? (c==="당일"?"#dc2626":c==="일반"?"#059669":"#ea580c") : "#f8fafc",
