@@ -19,10 +19,10 @@ try { fdb = getDatabase(initializeApp(firebaseConfig)); } catch (e) {}
 const dbSet = (p, val) => { try { if (fdb) set(ref(fdb, p), val); } catch (e) {} };
 
 
-const ZONES = ["상부", "하부", "B", "C", "D", "P", "T", "W", "Z"];
+const ZONES = ["상부", "하부", "B", "C", "D", "P/Z", "T", "W", "V"];
 const ZONE_COLORS = {
   "상부": "#7c3aed", "하부": "#2563eb", "B": "#ea580c", "C": "#0891b2",
-  "D": "#dc2626", "P": "#059669", "T": "#db2777", "W": "#65a30d", "Z": "#d97706",
+  "D": "#dc2626", "P/Z": "#059669", "T": "#db2777", "W": "#65a30d", "V": "#6366f1",
 };
 const TYPES = ["단수", "단포"];
 const DAYS = ["당일", "일반"];
@@ -41,17 +41,8 @@ const initData = () => {
     const saved = localStorage.getItem("dansu_v2_data");
     if (saved) {
       const d = JSON.parse(saved);
-      ZONES.forEach(z => {
-        if (!d[z]) {
-          d[z] = {};
-          TYPES.forEach(t => { d[z][t] = {}; DAYS.forEach(dy => { d[z][t][dy] = false; }); });
-        } else {
-          TYPES.forEach(t => {
-            if (!d[z][t]) { d[z][t] = {}; DAYS.forEach(dy => { d[z][t][dy] = false; }); }
-            else { DAYS.forEach(dy => { if (d[z][t][dy] === undefined) d[z][t][dy] = false; }); }
-          });
-        }
-      });
+      if (d["P"] !== undefined && d["P/Z"] === undefined) { d["P/Z"] = d["P"]; delete d["P"]; }
+      if (d["Z"] !== undefined && d["V"] === undefined) { d["V"] = d["Z"]; delete d["Z"]; }
       return d;
     }
   } catch (e) {}
