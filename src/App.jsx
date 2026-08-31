@@ -63,10 +63,11 @@ function CircleProgress({ percent, color, size = 80 }) {
   const dash = (percent / 100) * circ;
   if (loading) {
     return (
-      <div style={{ minHeight:"100vh", background:"#f0f4f8", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'Pretendard','Apple SD Gothic Neo',sans-serif" }}>
-        <div style={{ fontSize:28, fontWeight:900, background:"linear-gradient(135deg,#7c3aed,#ea580c)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:16 }}>단수단포</div>
-        <div style={{ width:40, height:40, border:"4px solid #e2e8f0", borderTop:"4px solid #7c3aed", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{ minHeight:"100vh", background:"#f0f4f8", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Pretendard','Apple SD Gothic Neo',sans-serif", fontSize:16, color:"#64748b" }}>
+        불러오는 중...
+      </div>
+    );
+  } }`}</style>
         <div style={{ marginTop:16, fontSize:13, color:"#64748b" }}>데이터 불러오는 중...</div>
       </div>
     );
