@@ -61,6 +61,17 @@ function CircleProgress({ percent, color, size = 80 }) {
   const r = (size - 8) / 2;
   const circ = 2 * Math.PI * r;
   const dash = (percent / 100) * circ;
+  if (loading) {
+    return (
+      <div style={{ minHeight:"100vh", background:"#f0f4f8", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'Pretendard','Apple SD Gothic Neo',sans-serif" }}>
+        <div style={{ fontSize:28, fontWeight:900, background:"linear-gradient(135deg,#7c3aed,#ea580c)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:16 }}>단수단포</div>
+        <div style={{ width:40, height:40, border:"4px solid #e2e8f0", borderTop:"4px solid #7c3aed", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <div style={{ marginTop:16, fontSize:13, color:"#64748b" }}>데이터 불러오는 중...</div>
+      </div>
+    );
+  }
+
   return (
     <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#e2e8f0" strokeWidth={5} />
@@ -72,6 +83,7 @@ function CircleProgress({ percent, color, size = 80 }) {
 }
 
 export default function App() {
+  const [loading, setLoading] = useState(true);
   const [data, setData] = useState(initData);
   const [activeType, setActiveType] = useState("단수");
   const [activeDay, setActiveDay] = useState("당일");
@@ -110,7 +122,8 @@ export default function App() {
 
   const saveData = (newData) => { if (!editable) return;
     setData(newData);
-    try { localStorage.setItem("dansu_v2_data", JSON.stringify(newData)); } catch (e) {} dbSet("dansu/data", newData);
+    try { localStorage.setItem("dansu_v2_data", JSON.stringify(newData)); } catch (e) {}
+    dbSet("dansu/data", newData);
   };
 
   const toggle = (zone, type, dy) => {
@@ -148,8 +161,10 @@ export default function App() {
         setData(v);
         try { localStorage.setItem("dansu_v2_data", JSON.stringify(v)); } catch (e) {}
       }
+      setLoading(false);
     }));
-    return () => subs.forEach(u => u());
+    const timeout = setTimeout(() => setLoading(false), 3000);
+    return () => { subs.forEach(u => u()); clearTimeout(timeout); };
   }, []);
 
   const grandStats = useMemo(() => {
