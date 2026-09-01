@@ -16,7 +16,17 @@ const firebaseConfig = {
 const EDIT_PASSWORD = "002";
 let fdb = null;
 try { fdb = getDatabase(initializeApp(firebaseConfig)); } catch (e) {}
-const dbSet = (p, val) => { try { if (fdb) set(ref(fdb, p), val); } catch (e) {} };
+const dbSet = (p, val) => { 
+  try { 
+    if (fdb) {
+      set(ref(fdb, p), val)
+        .then(() => console.log("Firebase write OK:", p))
+        .catch(e => console.error("Firebase write FAIL:", p, e));
+    } else {
+      console.error("fdb is null!");
+    }
+  } catch (e) { console.error("dbSet error:", e); } 
+};
 
 
 const ZONES = ["상부", "하부", "B", "C", "D", "P/Z", "T", "W", "V"];
@@ -108,7 +118,12 @@ export default function App() {
     try { localStorage.setItem("dansu_enabled_cats", JSON.stringify(next)); } catch (e) {}
   };
 
-  const saveData = (newData) => { if (!editable) return;
+  const editableRef = useRef(editable);
+  useEffect(() => { editableRef.current = editable; }, [editable]);
+
+  const saveData = (newData) => {
+    const isEditable = editable || (typeof localStorage !== "undefined" && localStorage.getItem("dansu_editable") === "true");
+    if (!isEditable) return;
     setData(newData);
     try { localStorage.setItem("dansu_v2_data", JSON.stringify(newData)); } catch (e) {}
     dbSet("dansu/data", newData);
@@ -167,6 +182,13 @@ export default function App() {
   }, [data]);
 
   // 대시보드용 요약 실시간 전송
+  // data 변경 시 Firebase 자동 동기화
+  useEffect(() => {
+    ZONES.forEach(z => {
+      if (data[z]) dbSet(`dansu/data/${z}`, data[z]);
+    });
+  }, [data]);
+
   useEffect(() => {
     let totalPct = 0, count = 0;
     TYPES.forEach(t => {
