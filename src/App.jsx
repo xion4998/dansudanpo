@@ -130,9 +130,11 @@ export default function App() {
   };
 
   const toggle = (zone, type, dy) => {
+    const zd = data[zone] || {};
+    const td = zd[type] || {};
     saveData({
       ...data,
-      [zone]: { ...data[zone], [type]: { ...data[zone][type], [dy]: !data[zone][type][dy] } }
+      [zone]: { ...zd, [type]: { ...td, [dy]: !td[dy] } }
     });
   };
 
