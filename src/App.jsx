@@ -121,12 +121,23 @@ export default function App() {
   const editableRef = useRef(editable);
   useEffect(() => { editableRef.current = editable; }, [editable]);
 
-  const saveData = (newData) => {
+  const saveData = (newData, changedZone) => {
     const isEditable = editable || (typeof localStorage !== "undefined" && localStorage.getItem("dansu_editable") === "true");
     if (!isEditable) return;
     setData(newData);
     try { localStorage.setItem("dansu_v2_data", JSON.stringify(newData)); } catch (e) {}
-    dbSet("dansu/data", newData);
+    if (changedZone && newData[changedZone]) {
+      const fbKey = changedZone.replace(/\//g, "_");
+      dbSet(`dansu/data/${fbKey}`, newData[changedZone]);
+    } else {
+      // 전체 저장 (resetAll 등)
+      ZONES.forEach(z => {
+        if (newData[z]) {
+          const fbKey = z.replace(/\//g, "_");
+          dbSet(`dansu/data/${fbKey}`, newData[z]);
+        }
+      });
+    }
   };
 
   const toggle = (zone, type, dy) => {
@@ -135,7 +146,7 @@ export default function App() {
     saveData({
       ...data,
       [zone]: { ...zd, [type]: { ...td, [dy]: !td[dy] } }
-    });
+    }, zone);
   };
 
   const [resetConfirm, setResetConfirm] = useState(false);
