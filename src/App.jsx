@@ -156,20 +156,26 @@ export default function App() {
   };
 
 
+  const isWritingRef = useRef(false);
+
   // Firebase 실시간 구독
   useEffect(() => {
     if (!fdb) return;
     const subs = [];
-    subs.push(onValue(ref(fdb, "dansu/data"), snap => {
-      const v = snap.val();
-      if (v) {
-        // Firebase 키 P_Z → P/Z 변환
-        const converted = {};
-        Object.keys(v).forEach(k => { converted[k.replace(/_/g, "/")] = v[k]; });
-        setData(converted);
-        try { localStorage.setItem("dansu_v2_data", JSON.stringify(v)); } catch (e) {}
-      }
-    }));
+    ZONES.forEach(z => {
+      const fbKey = z.replace(/\//g, "_");
+      subs.push(onValue(ref(fdb, `dansu/data/${fbKey}`), snap => {
+        const v = snap.val();
+        if (v) {
+          isWritingRef.current = true;
+          setData(prev => {
+            const next = { ...prev, [z]: v };
+            try { localStorage.setItem("dansu_v2_data", JSON.stringify(next)); } catch (e) {}
+            return next;
+          });
+        }
+      }));
+    });
     return () => subs.forEach(u => u());
   }, []);
 
@@ -187,13 +193,7 @@ export default function App() {
   }, [data]);
 
   // 대시보드용 요약 실시간 전송
-    // data 변경 시 Firebase 자동 동기화
-  useEffect(() => {
-    ZONES.forEach(z => {
-      const fbKey = z.replace(/\//g, "_");
-      if (data[z]) dbSet(`dansu/data/${fbKey}`, data[z]);
-    });
-  }, [data]);
+  
 
   useEffect(() => {
     let totalPct = 0, count = 0;
